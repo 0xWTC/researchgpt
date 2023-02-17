@@ -73,11 +73,7 @@ class Chatbot():
 
     def create_df(self, pdf):
         print('Creating dataframe')
-        filtered_pdf= []
-        for row in pdf:
-            if len(row['text']) < 30:
-                continue
-            filtered_pdf.append(row)
+        filtered_pdf = [row for row in pdf if len(row['text']) >= 30]
         df = pd.DataFrame(filtered_pdf)
         # print(df.shape)
         # remove elements with identical df[text] and df[page] values
@@ -101,15 +97,19 @@ class Chatbot():
             engine="text-embedding-ada-002"
         )
         df["similarity"] = df.embeddings.apply(lambda x: cosine_similarity(x, query_embedding))
-        
+
         results = df.sort_values("similarity", ascending=False, ignore_index=True)
         # make a dictionary of the the first three results with the page number as the key and the text as the value. The page number is a column in the dataframe.
         results = results.head(n)
-        global sources 
-        sources = []
-        for i in range(n):
-            # append the page number and the text as a dict to the sources list
-            sources.append({'Page '+str(results.iloc[i]['page']): results.iloc[i]['text'][:150]+'...'})
+        global sources
+        sources = [
+            {
+                'Page '
+                + str(results.iloc[i]['page']): results.iloc[i]['text'][:150]
+                + '...'
+            }
+            for i in range(n)
+        ]
         print(sources)
         return results.head(n)
     
@@ -139,8 +139,7 @@ class Chatbot():
         r = openai.Completion.create(model="text-davinci-003", prompt=prompt, temperature=0.4, max_tokens=1500)
         answer = r.choices[0]['text']
         print('Done sending request to GPT-3')
-        response = {'answer': answer, 'sources': sources}
-        return response
+        return {'answer': answer, 'sources': sources}
 
 @app.route("/", methods=["GET", "POST"])
 def index():
